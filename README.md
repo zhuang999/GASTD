@@ -15,9 +15,9 @@ pip install -r requirements.txt
 
 <!-- https://drive.google.com/file/d/1ST6GQidWVlR6yQle38MfPUSUc29t9xIT/view?usp=sharing -->
 
-**2. place [Graphs.zip](https://drive.google.com/file/d/1KC361Gq-K-0Aw7xu5pyl51YOgMK9JtMb/view?usp=sharing) into Graph_Flashback/KGE/ and unzip the file as following :**
+**2. place [Graphs.zip](https://drive.google.com/file/d/1KC361Gq-K-0Aw7xu5pyl51YOgMK9JtMb/view?usp=sharing) into KGE/ and unzip the file as following :**
 
-/KGE/Graphs/gowalla_scheme2_transe_loc_temporal_100.pkl
+/KGE/gowalla_scheme2_transe_loc_temporal_100.pkl
 
 # Model Training
 
