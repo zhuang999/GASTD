@@ -1,5 +1,5 @@
 # GASTD: Graph-Augmented Spatial-Temporal Distillation for Efficient Next POI Recommendation
-[image](fig/architecture.pdf)
+![architecture](fig/architecture.png)
 # Requirements
 ```
 pip install -r requirements.txt
@@ -28,14 +28,14 @@ python train.py
 # Motivation
 
 The findings from the data visualization analysis are as follows: (a) the student model derived from standard knowledge distillation lacks confidence, (b) its prediction errors are concentrated in high-entropy regions of the teacher model, and (c) the student's confidence decreases as the teacher's entropy increases. These insights motivate us to enhance the student's confidence to improve its lightweight prediction accuracy. 
-[motivation](fig/intro.pdf)
+![motivation](fig/intro.png)
 
 # Trajectory Completion Module (TCM)
 
 To enhance the spatial-temporal information and confidence of the student model, we mined the trajectory to identify potentially missing check-ins.
-[TCM](fig/bfs.pdf)
+![TCM](fig/bfs.png)
 
 # Efficiency
 
 We leveraged a reliable multi-teacher knowledge distillation framework, which not only improved the prediction accuracy of the student model but also retained its efficiency advantage.
-[efficiency](fig/inference_time.pdf)
+![efficiency](fig/inference_time.png)
