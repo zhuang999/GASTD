@@ -63,7 +63,7 @@ class MLPMixer(nn.Module):
     def __init__(self, input_size, user_count, hidden_size, f_t, f_s, rnn_factory, lambda_loc, lambda_user, use_weight,
                  graph, spatial_graph, friend_graph, use_graph_user, use_spatial_graph, interact_graph, graph_nx, args):
         super().__init__()
-        self.input_size = input_size  # POI个数
+        self.input_size = input_size  
         self.user_count = user_count
         self.hidden_size = hidden_size
         self.f_t = f_t  # function for computing temporal weight
@@ -136,7 +136,7 @@ class MLPMixer(nn.Module):
         x_emb = self.encoder(x)
         adj_emb = self.encoder(x_adj)
 
-        # # 是否用GCN来更新user embedding
+        
         # if self.use_graph_user:
         #     # I_f = identity(self.friend_graph.shape[0], format='coo')
         #     # friend_graph = (self.friend_graph * self.lambda_user + I_f).astype(np.float32)
@@ -161,7 +161,7 @@ class MLPMixer(nn.Module):
 
         p_u = self.user_encoder(active_user)  # (1, user_len, hidden_size)
         p_u = p_u.view(user_len, self.hidden_size)
-        # # AX,即GCN
+        # # AX,GCN
         # graph = self.graph.to(x.device)
         # loc_emb = self.encoder(torch.LongTensor(
         #     list(range(self.input_size - 2))).to(x.device))
@@ -177,7 +177,7 @@ class MLPMixer(nn.Module):
         #         spatial_graph).to(x.device)  # sparse tensor gpu
         #     encoder_weight += torch.sparse.mm(spatial_graph,
         #                                       loc_emb).to(x.device)
-        #     encoder_weight /= 2  # 求均值
+        #     encoder_weight /= 2 
         #
         # new_x_emb = []
         # for i in range(seq_len):

@@ -63,13 +63,13 @@ log_string(log, 'Total Checkins number:{}'.format(poi_loader.checkins_count()))
 
 # create flashback trainer
 with open(setting.trans_loc_file, 'rb') as f:  # transition POI graph
-    transition_graph = pickle.load(f)  # 在cpu上
+    transition_graph = pickle.load(f)  # cpu
 # transition_graph = top_transition_graph(transition_graph)
 transition_graph = coo_matrix(transition_graph)
 
 if setting.use_spatial_graph:
     with open(setting.trans_loc_spatial_file, 'rb') as f:  # spatial POI graph
-        spatial_graph = pickle.load(f)  # 在cpu上
+        spatial_graph = pickle.load(f)  # cpu
     # spatial_graph = top_transition_graph(spatial_graph)
     spatial_graph = coo_matrix(spatial_graph)
 else:
@@ -77,14 +77,14 @@ else:
 
 if setting.use_graph_user:
     with open(setting.trans_user_file, 'rb') as f:
-        friend_graph = pickle.load(f)  # 在cpu上
+        friend_graph = pickle.load(f)  # cpu
     # friend_graph = top_transition_graph(friend_graph)
     friend_graph = coo_matrix(friend_graph)
 else:
     friend_graph = None
 
 with open(setting.trans_interact_file, 'rb') as f:  # User-POI interaction graph
-    interact_graph = pickle.load(f)  # 在cpu上
+    interact_graph = pickle.load(f)  # cpu
 interact_graph = csr_matrix(interact_graph)
 
 log_string(log, 'Successfully load graph')

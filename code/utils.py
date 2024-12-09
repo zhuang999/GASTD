@@ -45,7 +45,7 @@ def calculate_preference_similarity(m1, m2, pref):
         v1 = m1[i]
         for j in range(seq_len):
             v2 = m2[i][j]
-            similarity[i][j] = (1 + torch.cosine_similarity(v1 + pref, v2, dim=0).item()) / 2  # 归一化到[0, 1]
+            similarity[i][j] = (1 + torch.cosine_similarity(v1 + pref, v2, dim=0).item()) / 2  # norm [0, 1]
 
     return similarity
 
@@ -61,7 +61,7 @@ def compute_preference(m1, m2, pref):
 #     """
 #         u1: (1, hidden_size)
 #         m2：(user_count - 1, hidden_size)
-#         cur_u: 代表当前用户u1的实际索引id
+#         cur_u: index id
 #         return: calculate the similarity between users, which means user's similarity
 #     """
 #     user_len = m2.shape[0]
@@ -70,7 +70,7 @@ def compute_preference(m1, m2, pref):
 #     similarity = torch.zeros(user_len, dtype=torch.float32).to(device)  # (user_count - 1, )
 #     for u in range(user_len):
 #         u2 = m2[u]
-#         similarity[u] = (1 + torch.cosine_similarity(u1 + friend, u2, dim=0).item()) / 2  # 归一化到[0, 1]
+#         similarity[u] = (1 + torch.cosine_similarity(u1 + friend, u2, dim=0).item()) / 2  # norm [0, 1]
 #
 #     return similarity
 
@@ -79,7 +79,6 @@ def get_user_static_preference(pref, locs):
     """
         pref: (user_len, seq_len)
         locs: (user_len, seq_len, hidden_size)
-        return: 返回用户对于所访问POI的全局偏好
     """
     # pref = torch.softmax(pref, dim=1)  # (user_len, seq_len)
     # pref = pref.unsqueeze(2)  # (user_len, seq_len, 1)
@@ -105,7 +104,7 @@ def sampling_prob(prob, label, num_neg):
     for batch in range(num_label):
         random_ig = random.sample(range(l_m), num_neg)  # (num_neg) from (0 -- l_max - 1)
         while label[batch].item() in random_ig:  # no intersection
-            # print('循环查找')
+            
             random_ig = random.sample(range(l_m), num_neg)
 
         # place the pos labels ahead and neg samples in the end
@@ -188,7 +187,7 @@ def calculate_reverse_random_walk_matrix(adj_mx):
 
 
 def log_string(log, string):
-    """打印log"""
+    """print log"""
     log.write(string + '\n')
     log.flush()
     print(string)
@@ -202,7 +201,7 @@ if __name__ == '__main__':
     count = 0
     # for i in range(user_similarity_matrix.shape[0]):
     #     for j in range(user_similarity_matrix.shape[1]):
-    #         if user_similarity_matrix[i][j] > 0.01:  # 5747013, 即9.5%
+    #         if user_similarity_matrix[i][j] > 0.01:  # 5747013, 9.5%
     #             count += 1
 
     print('count: ', count)

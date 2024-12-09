@@ -72,7 +72,7 @@ class MHInrAttn(nn.Module):
         str_mat = F.softmax(str_mat, dim=-1)
         scores = torch.matmul(query, key.transpose(-2, -1)) / scale_term + str_mat
         if attn_mask is not None:
-            scores.masked_fill(attn_mask == 0.0, -1e9)
+            scores = scores.masked_fill(attn_mask == 0.0, -1e9)
         prob = F.softmax(scores, dim=-1)
         prob = self.dropout(prob)
         x = torch.matmul(prob, value)

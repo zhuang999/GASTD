@@ -51,19 +51,19 @@ class Setting:
         self.dataset_file = './data/{}'.format(args.dataset)
         self.friend_file = './data/{}'.format(args.friendship)
         self.max_users = 0  # 0 = use all available users
-        self.sequence_length = 20  # 将用户的所有check-in轨迹划分成固定长度为20的多个子轨迹
+        self.sequence_length = 20  
         self.batch_size = args.batch_size
         self.min_checkins = 101
 
         # evaluation        
-        self.validate_epoch = args.validate_epoch  # 每5轮验证一次
+        self.validate_epoch = args.validate_epoch 
         self.report_user = args.report_user  # -1
 
         # log
         self.log_file = args.log_file
 
-        self.trans_loc_file = args.trans_loc_file  # 时间POI graph
-        self.trans_loc_spatial_file = args.trans_loc_spatial_file  # 空间POI graph
+        self.trans_loc_file = args.trans_loc_file  # temporal POI graph
+        self.trans_loc_spatial_file = args.trans_loc_spatial_file  # spatial POI graph
         self.trans_user_file = args.trans_user_file
         self.trans_interact_file = args.trans_interact_file
 

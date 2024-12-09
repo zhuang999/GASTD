@@ -65,14 +65,14 @@ class PoiDataset(Dataset):
             self.user_permutation.append(i)  # [0, 1, ..., User_NUM-1]
 
     def shuffle_users(self):
-        random.shuffle(self.user_permutation)  # 原地随机打乱
+        random.shuffle(self.user_permutation)  
         # reset active users:
         self.next_user_idx = 0
         self.active_users = []
         self.active_user_seq = []
         for i in range(self.batch_size):
-            self.next_user_idx = (self.next_user_idx + 1) % len(self.users)  # 200(1024),下一活跃用户也即打乱后的第201个用户
-            self.active_users.append(self.user_permutation[i])  # 活跃用户为打乱后的前200个(1024)用户
+            self.next_user_idx = (self.next_user_idx + 1) % len(self.users)  
+            self.active_users.append(self.user_permutation[i])  
             self.active_user_seq.append(0)
 
     def __init__(self, users, times, time_slots, coords, locs, sequence_length, batch_size, split, usage, loc_count,
@@ -84,12 +84,12 @@ class PoiDataset(Dataset):
         self.coords = coords
         self.poi2gps = poi2gps
 
-        self.labels = []  # 二重列表
-        self.lbl_times = []  # labels所对应的GPS坐标以及timestamp
+        self.labels = []  
+        self.lbl_times = []  
         self.lbl_time_slots = []
         self.lbl_coords = []
 
-        self.sequences = []  # 三重列表,每个元素表示以固定长度(20)子序列的形式来存放每个用户的check-ins
+        self.sequences = [] 
         self.sequences_times = []
         self.sequences_time_slots = []
         self.sequences_coords = []
@@ -99,9 +99,9 @@ class PoiDataset(Dataset):
         self.sequences_lbl_time_slots = []
         self.sequences_lbl_coords = []
 
-        self.sequences_count = []  # 存放每个用户的子序列的数目
-        self.Ps = []  # 没用?
-        self.Qs = torch.zeros(loc_count, 1)  # 有什么用?
+        self.sequences_count = [] 
+        self.Ps = []  
+        self.Qs = torch.zeros(loc_count, 1)  
         self.usage = usage  # MAX_SEQ_LENGTH
         self.batch_size = batch_size  # 200 or 1024
         self.loc_count = loc_count
@@ -119,8 +119,8 @@ class PoiDataset(Dataset):
 
         # align labels to locations (shift by one)
         for i, loc in enumerate(locs):
-            self.locs[i] = loc[:-1]  # data,列表
-            self.labels.append(loc[1:])  # labels,列表
+            self.locs[i] = loc[:-1]  # data,
+            self.labels.append(loc[1:])  # labels,
             self.lbl_times.append(self.times[i][1:])
             self.lbl_time_slots.append(self.time_slots[i][1:])
             self.lbl_coords.append(self.coords[i][1:])
@@ -168,9 +168,9 @@ class PoiDataset(Dataset):
         for i, (time, time_slot, coord, loc, label, lbl_time, lbl_time_slot, lbl_coord) in enumerate(
                 zip(self.times, self.time_slots, self.coords, self.locs, self.labels, self.lbl_times,
                     self.lbl_time_slots, self.lbl_coords)):
-            seq_count = len(loc) // sequence_length  # 统计每个用户的sequence数目, 至少5个
+            seq_count = len(loc) // sequence_length  
             assert seq_count > 0, 'fix seq-length and min-checkins in order to have at least one test sequence in a 80/20 split!'
-            seqs = []  # 二重列表,以固定长度子序列的形式来存放每个用户的check-ins
+            seqs = []  
             seq_times = []
             seq_time_slots = []
             seq_coords = []
@@ -276,19 +276,19 @@ class PoiDataset(Dataset):
         for i in range(self.batch_size):
             i_user = self.active_users[i]  # [0, 1, ..., 199]
             j = self.active_user_seq[i]  # 0
-            max_j = self.sequences_count[i_user]  # 用户i所拥有的序列数目
+            max_j = self.sequences_count[i_user]  
             if self.usage == Usage.MIN_SEQ_LENGTH:
                 max_j = self.min_seq_count
             if self.usage == Usage.CUSTOM:
                 max_j = min(max_j, self.custom_seq_count)  # use either the users maxima count or limit by custom count
-            if j >= max_j:  # 用户i的所有子序列都已经被使用过了！
+            if j >= max_j:  
                 # replace this user in current sequence:
-                i_user = self.user_permutation[self.next_user_idx]  # 取第201个用户作为下一个用户
+                i_user = self.user_permutation[self.next_user_idx]  
                 j = 0
                 self.active_users[i] = i_user
                 self.active_user_seq[i] = j
                 self.next_user_idx = (self.next_user_idx + 1) % len(self.users)
-                while self.user_permutation[self.next_user_idx] in self.active_users:  # 循环查找不在活跃用户里的新用户
+                while self.user_permutation[self.next_user_idx] in self.active_users:  
                     self.next_user_idx = (self.next_user_idx + 1) % len(self.users)
                 # TODO: throw exception if wrapped around!
             
@@ -301,7 +301,7 @@ class PoiDataset(Dataset):
                     weight_list.append(self.graph_nx[t][adj_node].get('weight'))
                 weight_list = np.array(weight_list)
                 adj_list = np.array(adj_list)
-                adj_list = adj_list[np.argsort(weight_list)].tolist()  #升序排序
+                adj_list = adj_list[np.argsort(weight_list)].tolist()  
                 future_seq.append(adj_list)
 
 
@@ -359,7 +359,7 @@ class PoiDataset(Dataset):
                 coor_pad_all.append(coor_pad)
 
             # use this user:
-            reset_h.append(j == 0)  # 添加新用户时,要为他重置h  True or False
+            reset_h.append(j == 0)  
             seqs.append(torch.tensor(seq_pad_all)) #seq_pad
             seqs_real.append(torch.tensor(self.sequences[i_user][j]))
             future_seqs.append(torch.tensor(future_seq))
@@ -378,7 +378,7 @@ class PoiDataset(Dataset):
             lbl_time_slots.append(torch.tensor(self.sequences_lbl_time_slots[i_user][j]))
             lbl_coords.append(torch.tensor(self.sequences_lbl_coords[i_user][j]))
 
-            self.active_user_seq[i] += 1  # 如果用户i再次被选择为活跃用户时,j加1使得选择i的后续的子序列
+            self.active_user_seq[i] += 1  
 
         x = torch.stack(seqs, dim=2)
         x_real = torch.stack(seqs_real, dim=1)

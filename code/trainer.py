@@ -66,7 +66,7 @@ class FlashbackTrainer():
         def f_t(delta_t, user_len): return ((torch.cos(delta_t * 2 * np.pi / 86400) + 1) / 2) * torch.exp(
             -(delta_t / 86400 * self.lambda_t))  # hover cosine + exp decay
 
-        # exp decay  2个functions
+        # exp decay  2 functions
         def f_s(delta_s, user_len): return torch.exp(-(delta_s * self.lambda_s))
         self.loc_count = loc_count + 2
         self.cross_entropy_loss = nn.CrossEntropyLoss()

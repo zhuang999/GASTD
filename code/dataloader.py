@@ -26,13 +26,13 @@ class PoiDataloader():
 
         self.user2id = {}
         self.poi2id = {}
-        self.poi2gps = {}  # 自己加的
+        self.poi2gps = {}  
 
         self.users = []
-        self.times = []  # 二重列表,每个元素是active user所对应POIs的访问timestamp,按时间顺序排序
+        self.times = []  
         self.time_slots = []
-        self.coords = []  # 二重列表,每个元素是active user所对应POIs的GPS坐标,按时间顺序排序
-        self.locs = []  # 二重列表,每个元素是active user所对应POIs,按时间顺序排序
+        self.coords = [] 
+        self.locs = []  
 
     def create_dataset(self, sequence_length, batch_size, split, graph_nx, walk_forward_func, args, usage=Usage.MAX_SEQ_LENGTH, custom_seq_count=1):
         return PoiDataset(self.users.copy(),
@@ -115,7 +115,7 @@ class PoiDataloader():
 
             time = (datetime.strptime(tokens[1], "%Y-%m-%dT%H:%M:%SZ") - datetime(1970, 1,
                                                                                   1)).total_seconds()  # unix seconds
-            # 自己加的time slot, 将一周的时间分成24 * 7个时间槽
+            
             time_slot = (datetime.strptime(tokens[1], "%Y-%m-%dT%H:%M:%SZ")).weekday() * 24 + (datetime.strptime(tokens[1], "%Y-%m-%dT%H:%M:%SZ")).hour
             lat = float(tokens[2])
             long = float(tokens[3])
@@ -134,8 +134,8 @@ class PoiDataloader():
                 user_coord.insert(0, coord)
                 user_loc.insert(0, location)
             else:
-                self.users.append(prev_user)  # 添加用户
-                self.times.append(user_time)  # 添加列表
+                self.users.append(prev_user) 
+                self.times.append(user_time)  
                 self.time_slots.append(user_time_slot)
                 self.coords.append(user_coord)
                 self.locs.append(user_loc)
