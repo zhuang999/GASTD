@@ -145,20 +145,20 @@ class Evaluation:
                         t_val_s = r_kj_s[t]
                         upper_s = np.where(r_kj_s > t_val_s)[0]
                         precision_s = 1. / (1 + len(upper_s))
-                        precision = precision_t if precision_t >= precision_s else precision_s
+                        #precision = precision_t if precision_t >= precision_s else precision_s
                         # store
                         u_iter_cnt[active_users[j]] += 1
-                        u_recall1[active_users[j]] += t in r_t[:1]
-                        u_recall5[active_users[j]] += t in r_t[:5]
-                        u_recall10[active_users[j]] += t in r_t[:10]
-                        u_average_precision[active_users[j]] += precision
+                        u_recall1[active_users[j]] += t in r_s[:1]
+                        u_recall5[active_users[j]] += t in r_s[:5]
+                        u_recall10[active_users[j]] += t in r_s[:10]
+                        u_average_precision[active_users[j]] += precision_s
 
-                        if t not in r_t[:1]:
-                            u_recall1[active_users[j]] += t in r_s[:1]
-                        if t not in r_t[:5]:
-                            u_recall5[active_users[j]] += t in r_s[:5]
-                        if t not in r_t[:10]:
-                            u_recall10[active_users[j]] += t in r_s[:10]
+                        # if t not in r_t[:1]:
+                        #     u_recall1[active_users[j]] += t in r_s[:1]
+                        # if t not in r_t[:5]:
+                        #     u_recall5[active_users[j]] += t in r_s[:5]
+                        # if t not in r_t[:10]:
+                        #     u_recall10[active_users[j]] += t in r_s[:10]
 
                         #plot the distribution
                         t, s = t.item(), s.item()
@@ -192,6 +192,8 @@ class Evaluation:
                             confidence_t_all.append(confidence_t.item())
                             confidence_s_all.append(confidence_s.item())
 
+
+#no
                         # dict = {'confidence_s':confidence_s_all, 'confidence_t':confidence_t_all, 'entropy_s':entropy_s_all, 'entropy_t':entropy_t_all, 'distance':distance_all,'distance_t':distance_t_all, 'distance_s':distance_s_all, 'false_negative_distance':false_negative_distance, 'false_negative_entropy':false_negative_entropy}
                         # np.save('experiment',dict)
                         # print(np.load('experiment.npy',allow_pickle=True))
@@ -226,5 +228,5 @@ class Evaluation:
             log_string(self._log, 'recall@10: ' + formatter.format(recall10 / iter_cnt))
             log_string(self._log, 'MAP: ' + formatter.format(average_precision / iter_cnt))
             print('predictions:', iter_cnt)
-            dict = {'confidence_s':confidence_s_all, 'confidence_t':confidence_t_all, 'entropy_s':entropy_s_all, 'entropy_t':entropy_t_all, 'distance':distance_all,'distance_t':distance_t_all, 'distance_s':distance_s_all, 'false_negative_distance':false_negative_distance, 'false_negative_entropy':false_negative_entropy}
-            np.save('experiment_pad1',dict)
+            dict = {'confidence_t':confidence_s_all, 'confidence_s':confidence_t_all, 'entropy_s':entropy_s_all, 'entropy_t':entropy_t_all, 'distance':distance_all,'distance_t':distance_t_all, 'distance_s':distance_s_all, 'false_negative_distance':false_negative_distance, 'false_negative_entropy':false_negative_entropy}
+            np.save('experiment_pad25',dict)

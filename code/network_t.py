@@ -8,6 +8,7 @@ import scipy.sparse as sp
 import math
 from mlp_ib import TriMixer, TriMixer_adj, MultiLayerPerceptron, MixerBlock
 from model_geo import GeoEncoderLayer, GeoEncoder, EncoderLayer, SASEncoder, DecoderLayer, Decoder
+from model_attn import MultiHeadAttention
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -64,7 +65,7 @@ class Flashback(nn.Module):
     def __init__(self, input_size, user_count, hidden_size, f_t, f_s, rnn_factory, lambda_loc, lambda_user, use_weight,
                  graph, spatial_graph, friend_graph, use_graph_user, use_spatial_graph, interact_graph, graph_nx, args):
         super().__init__()
-        self.input_size = input_size  #
+        self.input_size = input_size  # POI个数
         self.user_count = user_count
         self.hidden_size = hidden_size
         self.f_t = f_t  # function for computing temporal weight
@@ -95,6 +96,7 @@ class Flashback(nn.Module):
         self.rnn = rnn_factory.create(hidden_size) 
         self.mixer = TriMixer(60, hidden_size) #args.sequence_length
         self.mixer_adj = TriMixer_adj(100)
+        self.mlpmixer = MixerBlock(hidden_size)
         self.mlp = MultiLayerPerceptron(1, 1)
         #self.mlpmixer = MixerBlock(hidden_size)
         self.drop = nn.Dropout(0.5)
@@ -108,14 +110,27 @@ class Flashback(nn.Module):
         self.enc_layer = EncoderLayer(hidden_size, exp_factor, dropout)
         self.enc = SASEncoder(hidden_size, self.enc_layer, depth)
 
-    def forward(self, x_real, x, x_adj, indexs, t, t_slot, s_real, s, y_t, y_t_slot, y_s, h, active_user):
+        self.multihead_enc = MultiHeadAttention(args.device, hidden_size, 5, 5, 4)
+
+    def Loss_l2(self):
+        base_params = dict(self.named_parameters())
+        loss_l2 = 0.
+        count = 0
+        for key, value in base_params.items():
+            if 'bias' not in key and 'pre_model' not in key:
+                loss_l2 += torch.sum(value ** 2)
+                count += value.nelement()
+        return loss_l2
+
+
+    def forward(self, x, x_real, x_adj, indexs, t, t_slot, s_real, s, y_t, y_t_slot, y_s, h, active_user):
         seq_len, user_len = x.size()
         seq_len_origin, _ = x_real.size()
         seq_pad_len, _, adj_len = x_adj.size()
         x_emb = self.encoder(x)
         adj_emb = self.encoder(x_adj)
 
-        # 
+        # 是否用GCN来更新user embedding
         if self.use_graph_user:
             # I_f = identity(self.friend_graph.shape[0], format='coo')
             # friend_graph = (self.friend_graph * self.lambda_user + I_f).astype(np.float32)
@@ -127,7 +142,7 @@ class Flashback(nn.Module):
                 list(range(self.user_count))).to(x.device))
             user_encoder_weight = torch.sparse.mm(friend_graph, user_emb).to(
                 x.device)  # (user_count, hidden_size)
-
+        
             if self.use_weight:
                 user_encoder_weight = self.user_gconv_weight(
                     user_encoder_weight)
@@ -137,10 +152,10 @@ class Flashback(nn.Module):
             p_u = self.user_encoder(active_user)  # (1, user_len, hidden_size)
             # (user_len, hidden_size)
             p_u = p_u.view(user_len, self.hidden_size)
-
+        #
         p_u = self.user_encoder(active_user)  # (1, user_len, hidden_size)
         p_u = p_u.view(user_len, self.hidden_size)
-        # 
+        # AX,即GCN
         graph = self.graph.to(x.device)
         loc_emb = self.encoder(torch.LongTensor(
             list(range(self.input_size - 2))).to(x.device))
@@ -156,89 +171,49 @@ class Flashback(nn.Module):
                 spatial_graph).to(x.device)  # sparse tensor gpu
             encoder_weight += torch.sparse.mm(spatial_graph,
                                               loc_emb).to(x.device)
-            encoder_weight /= 2  # 
-       
+            encoder_weight /= 2  # 求均值
+        
         new_x_emb = []
         for i in range(seq_len):
             # (user_len, hidden_size)
             temp_x = torch.index_select(encoder_weight, 0, x[i])
             new_x_emb.append(temp_x)
-        x_emb = torch.stack(new_x_emb, dim=0)  
-
-        # new_adj_emb = []
-        # for tt in range(seq_pad_len):
-        #     new_adj_seq = []
-        #     for i in range(adj_len):
-        #         #x_adj (seq_len, user_len, adj_len)
-        #         temp_x = torch.index_select(encoder_weight, 0, x_adj[tt, :, i])
-        #         new_adj_seq.append(temp_x)
-        #     new_adj_emb.append(torch.stack(new_adj_seq, dim=1))
-        # x_adj_emb = torch.stack(new_adj_emb, dim=0)  
-
-
-
-        # user-poi
-        loc_emb = self.encoder(torch.LongTensor(
-            list(range(self.input_size - 2))).to(x.device))
-        encoder_weight = loc_emb
-        interact_graph = self.interact_graph.to(x.device)
-        encoder_weight_user = torch.sparse.mm(
-            interact_graph, encoder_weight).to(x.device)
-
-        user_preference = torch.index_select(
-            encoder_weight_user, 0, active_user.squeeze()).unsqueeze(0)
-        # print(user_preference.size())
-        user_loc_similarity = torch.exp(
-            -(torch.norm(user_preference - x_emb, p=2, dim=-1))).to(x.device)
-        user_loc_similarity = user_loc_similarity.permute(1, 0)
+        x_emb = torch.stack(new_x_emb, dim=0)
+         
 
         attn_shape = (1, seq_len, seq_len)
         subsequent_mask = torch.triu(torch.ones(attn_shape), diagonal=1) # torch.uint8
-        subsequent_mask = (subsequent_mask == 0).unsqueeze(1)
+        subsequent_mask = (subsequent_mask == 0)
         subsequent_mask = subsequent_mask.long()
-        attn_mask = subsequent_mask.to(x.device)  #((1.0 - subsequent_mask) * (-2 ** 32 + 1)).to(x.device)
+        attn_mask = subsequent_mask.to(x_emb.device)  #((1.0 - subsequent_mask) * (-2 ** 32 + 1)).to(x.device)
+        out = self.multihead_enc(x_emb.transpose(0,1), x_emb.transpose(0,1), x_emb.transpose(0,1), attn_mask).transpose(0,1)
 
-        out = self.enc(x_emb.transpose(0,1), None, attn_mask).transpose(0,1) 
-
-
-        #out, h = self.rnn(x_emb, h)  # (seq_len, user_len, hidden_size)
         out_w = torch.zeros(seq_len, user_len,
                             self.hidden_size, device=x.device)
-
-        
         for i in range(seq_len):
             sum_w = torch.zeros(user_len, 1, device=x.device)  # (200, 1)
             for j in range(i + 1):
-                #dist_t = t[i] - t[j]
                 dist_s = torch.norm(s[i] - s[j], dim=-1)
-                #a_j = self.f_t(dist_t, user_len)  # (user_len, )
                 b_j = self.f_s(dist_s, user_len)
-                #a_j = a_j.unsqueeze(1)  # (user_len, 1)
                 b_j = b_j.unsqueeze(1)
                 w_j = b_j + 1e-10  # small epsilon to avoid 0 division
-                w_j = w_j * user_loc_similarity[:, j].unsqueeze(1)  # (user_len, 1)
                 sum_w += w_j
                 out_w[i] += w_j * out[j]  # (user_len, hidden_size)
             out_w[i] /= sum_w
 
-        # seq_len_origin = seq_len
-        # kd_weight = torch.zeros(seq_len_origin, seq_len_origin, user_len, device=x.device)
-        # for i in range(seq_len_origin):
-        #     sum_w = torch.zeros(user_len, 1, device=x.device)  # (200, 1)
-        #     for j in range(i + 1):
-        #         dist_t = t[i] - t[j]
-        #         mask_s = (s_real[i] - s_real[j]) < 1
-        #         dist_s = (s_real[i] - s_real[j]) * mask_s
-        #         dist_s = torch.norm(dist_s, dim=-1)
-        #         a_j = self.f_t(dist_t, user_len)  # (user_len, )
-        #         b_j = self.f_s(dist_s, user_len)
-        #         a_j = a_j.unsqueeze(1)  # (user_len, 1)
-        #         b_j = b_j.unsqueeze(1)
-        #         w_j = a_j * b_j + 1e-10  # small epsilon to avoid 0 division
-        #         w_j = w_j * user_loc_similarity[:, j].unsqueeze(1)  # (user_len, 1)
-        #         sum_w += w_j
-        #         kd_weight[i, j] = b_j.squeeze(1)
-        #     kd_weight[i] /= sum_w.squeeze(1)
+
+        kd_weight = torch.zeros(seq_len_origin, seq_len_origin, user_len, device=x.device)
+        for i in range(seq_len_origin):
+            sum_w = torch.zeros(user_len, 1, device=x.device)  # (200, 1)
+            for j in range(i + 1):
+                dist_s = s_real[i] - s_real[j]
+                dist_s = torch.norm(dist_s, dim=-1)
+                b_j = self.f_s(dist_s, user_len)
+                b_j = b_j.unsqueeze(1)
+                w_j = b_j + 1e-10  # small epsilon to avoid 0 division
+                sum_w += w_j
+                kd_weight[i, j] = b_j.squeeze(1)
+            kd_weight[i] /= sum_w.squeeze(1)
 
         out_pu = torch.zeros(seq_len, user_len, 2 *
                              self.hidden_size, device=x.device)
@@ -256,7 +231,6 @@ class Flashback(nn.Module):
             #t_x = torch.index_select(x[i], 0, indexs[i])
             #new_x.append(t_x)
         output = torch.stack(new_output_emb, dim=1)
-        kd_weight = None
 
         return output, None, kd_weight #output_prob
     

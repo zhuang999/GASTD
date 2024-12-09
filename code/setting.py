@@ -51,19 +51,19 @@ class Setting:
         self.dataset_file = './data/{}'.format(args.dataset)
         self.friend_file = './data/{}'.format(args.friendship)
         self.max_users = 0  # 0 = use all available users
-        self.sequence_length = 20  # 
+        self.sequence_length = 20  # 将用户的所有check-in轨迹划分成固定长度为20的多个子轨迹
         self.batch_size = args.batch_size
         self.min_checkins = 101
 
         # evaluation        
-        self.validate_epoch = args.validate_epoch  #
+        self.validate_epoch = args.validate_epoch  # 每5轮验证一次
         self.report_user = args.report_user  # -1
 
         # log
         self.log_file = args.log_file
 
-        self.trans_loc_file = args.trans_loc_file  # 
-        self.trans_loc_spatial_file = args.trans_loc_spatial_file  # 
+        self.trans_loc_file = args.trans_loc_file  # 时间POI graph
+        self.trans_loc_spatial_file = args.trans_loc_spatial_file  # 空间POI graph
         self.trans_user_file = args.trans_user_file
         self.trans_interact_file = args.trans_interact_file
 
@@ -80,12 +80,12 @@ class Setting:
     def parse_arguments(self, parser):
         # training
         parser.add_argument('--gpu', default=0, type=int, help='the gpu to use')  # -1
-        parser.add_argument('--hidden-dim', default=10, type=int, help='hidden dimensions to use')  # 10
-        parser.add_argument('--mlp-hidden-dim', default=10, type=int, help='hidden dimensions to use')  # 10
+        parser.add_argument('--hidden-dim', default=20, type=int, help='hidden dimensions to use')  # 10
+        parser.add_argument('--mlp-hidden-dim', default=20, type=int, help='hidden dimensions to use')  # 10
         parser.add_argument('--weight_decay', default=0, type=float, help='weight decay regularization')
         parser.add_argument('--lr', default=0.01, type=float, help='learning rate')  # 0.01
-        parser.add_argument('--epochs', default=50, type=int, help='amount of epochs')  # 100
-        parser.add_argument('--tea_epochs', default=35, type=int, help='amount of teacher epochs')  # 100
+        parser.add_argument('--epochs', default=25, type=int, help='amount of epochs')  # 100
+        parser.add_argument('--tea_epochs', default=25, type=int, help='amount of teacher epochs')  # 100
         parser.add_argument('--rnn', default='rnn', type=str, help='the GRU implementation to use: [rnn|gru|lstm]')
         parser.add_argument('--num_hidden_layers', default=2, type=int, help='number of transformer hidden layers')  
         parser.add_argument('--num_attention_heads', default=2, type=int, help='number of transformer heads')  
@@ -143,7 +143,7 @@ class Setting:
 
     def parse_gowalla(self, parser):
         # defaults for gowalla dataset
-        parser.add_argument('--batch-size', default=2, type=int,  # 200
+        parser.add_argument('--batch-size', default=200, type=int,  # 200
                             help='amount of users to process in one pass (batching)')
         parser.add_argument('--lambda_t', default=0.1, type=float, help='decay factor for temporal data')
         parser.add_argument('--lambda_s', default=1000, type=float, help='decay factor for spatial data')

@@ -10,6 +10,7 @@ from dataset import Split
 from utils import *
 from network_s import create_h0_strategy
 from evaluation import Evaluation
+from evaluation1 import Evaluation1
 from tqdm import tqdm
 from scipy.sparse import coo_matrix
 
@@ -114,6 +115,8 @@ h0_strategy = create_h0_strategy(
     setting.hidden_dim, setting.is_lstm)  # 10 True or False
 trainer.prepare(poi_loader.locations(), poi_loader.user_count(), setting.hidden_dim, setting.mlp_hidden_dim, setting.rnn_factory,
                 setting.device)
+evaluation_test1 = Evaluation1(dataset_test, dataloader_test,
+                             poi_loader.user_count(), h0_strategy, trainer, setting, log)
 evaluation_test = Evaluation(dataset_test, dataloader_test,
                              poi_loader.user_count(), h0_strategy, trainer, setting, log)
 print('{} {}'.format(trainer, setting.rnn_factory))
@@ -122,27 +125,29 @@ print('{} {}'.format(trainer, setting.rnn_factory))
 optimizer_t = torch.optim.Adam(trainer.parameters_t(
 ), lr=setting.learning_rate, weight_decay=setting.weight_decay)
 scheduler_t = torch.optim.lr_scheduler.MultiStepLR(
-    optimizer_t, milestones=[30, 45, 55, 80], gamma=0.2)
+    optimizer_t, milestones=[20, 40, 60, 80], gamma=0.2)
 
 optimizer_s = torch.optim.Adam(trainer.parameters_s(
 ), lr=setting.learning_rate, weight_decay=setting.weight_decay)
 scheduler_s = torch.optim.lr_scheduler.MultiStepLR(
-    optimizer_s, milestones=[30, 45, 55, 80], gamma=0.2)
+    optimizer_s, milestones=[20, 40, 60, 80], gamma=0.2)
 
 param_count = trainer.count_parameters()
 log_string(log, f'In total: {param_count} trainable parameters')
 
-print("load parameters")
-# trainer.save_parameters()
-trainer.load_parameters_t()
-trainer.load_parameters_s()
-print("load parameters successful")
-e = 1
-evaluation_test.evaluate(G_graph_poi_forward, e, poi2gps)
+# print("load parameters")
+# # trainer.save_parameters()
+# trainer.load_parameters_t()
+# trainer.load_parameters_s()
+# print("load parameters successful")
+# e = 1
+# evaluation_test.evaluate(G_graph_poi_forward, e, poi2gps)
 
 bar_tea = tqdm(total=setting.tea_epochs)
 bar_tea.set_description('Teacher Training')
 
+# # e = 1
+# # evaluation_test.evaluate(G_graph_poi_forward, e, poi2gps)
 
 for e in range(setting.tea_epochs):  # 100
     h = h0_strategy.on_init(setting.batch_size, setting.device)
@@ -172,7 +177,7 @@ for e in range(setting.tea_epochs):  # 100
 
         t = t.squeeze(0).to(setting.device)
         t_slot = t_slot.squeeze(0).to(setting.device)
-        
+
         s = s.squeeze(0)[:seq_len].to(setting.device)
         s_real = s_real.squeeze(0).to(setting.device)
 
@@ -182,22 +187,23 @@ for e in range(setting.tea_epochs):  # 100
         y_s = y_s.squeeze(0).to(setting.device)
         active_users = active_users.to(setting.device)
 
-        optimizer_s.zero_grad()
-        loss = trainer.loss_s(x_real, x, x_adj, indexs, indexs_u, indexs_m, t, t_slot, s, s_real, y, y_t,
+        optimizer_t.zero_grad()
+        loss = trainer.loss_t(x_real, x, x_adj, indexs, indexs_u, indexs_m, t, t_slot, s, s_real, y, y_t,
                             y_t_slot, y_s, h, active_users)
-
+        # loss2 = trainer.model_t.Loss_l2() * 1.5e-6
+        # lossx = loss + loss2
         loss.backward(retain_graph=True)
         # torch.nn.utils.clip_grad_norm_(trainer.parameters(), 5)
         losses.append(loss.item())
-        optimizer_s.step()
+        optimizer_t.step()
 
     # schedule learning rate:
-    scheduler_s.step()
+    scheduler_t.step()
     bar_tea.update(1)
     epoch_end = time.time()
     log_string(log, 'One teacher training need {:.2f}s'.format(
         epoch_end - epoch_start))
-    
+
     # statistics:
     if (e + 1) % 1 == 0:
         epoch_loss = np.mean(losses)
@@ -205,10 +211,10 @@ for e in range(setting.tea_epochs):  # 100
         log_string(log, f'Used learning rate: {scheduler_s.get_last_lr()[0]}')
         log_string(log, f'Avg Loss: {epoch_loss}')
 
-    if (e + 1) % 35 == 0:   #setting.validate_epoch
+    if (e + 1) % 25 == 0:   #setting.validate_epoch
         log_string(log, f'~~~ Test Teacher Set Evaluation (Epoch: {e + 1}) ~~~')
         evl_start = time.time()
-        evaluation_test.evaluate(G_graph_poi_forward, e, poi2gps)
+        evaluation_test1.evaluate(G_graph_poi_forward, e, poi2gps)
         evl_end = time.time()
         log_string(log, 'One teacher evaluate need {:.2f}s'.format(
             evl_end - evl_start))
@@ -217,7 +223,7 @@ bar_tea.close()
 
 print("load parameters")
 trainer.save_parameters_t()
-trainer.load_parameters_s()
+trainer.load_parameters_t()
 print("load parameters successful")
 
 bar = tqdm(total=setting.epochs)
@@ -268,9 +274,11 @@ for e in range(setting.epochs):  # 100
 
         optimizer_s.zero_grad()
         loss, stu_loss, kd_loss, tea_loss, weight_loss, inter_loss = trainer.loss_s(x_real, x, x_adj, indexs, indexs_u, indexs_m, t, t_slot, s, s_real, y, y_t,
-                            y_t_slot, y_s, h, active_users, e)
+                            y_t_slot, y_s, h, active_users)
 
-        loss.backward(retain_graph=True)
+        loss2 = trainer.model_s.Loss_l2() * 1.5e-6
+        lossx = loss + loss2
+        lossx.backward(retain_graph=True)
         #torch.nn.utils.clip_grad_norm_(trainer.parameters_s(), 5)
         losses.append(loss.item())
         stu_losses.append(stu_loss.item())
@@ -304,7 +312,7 @@ for e in range(setting.epochs):  # 100
 
 
 
-    if (e + 1) % 50 == 0:  #setting.validate_epoch
+    if (e + 1) % 25 == 0:  #setting.validate_epoch
         log_string(log, f'~~~ Test Student Set Evaluation (Epoch: {e + 1}) ~~~')
         evl_start = time.time()
         evaluation_test.evaluate(G_graph_poi_forward, e, poi2gps)
@@ -314,7 +322,7 @@ for e in range(setting.epochs):  # 100
 
 bar.close()
 
-# print("load parameters")
-# trainer.save_parameters()
-# #trainer.load_parameters_t()
-# print("load parameters successful")
+print("load parameters")
+trainer.save_parameters_s()
+#trainer.load_parameters_t()
+print("load parameters successful")

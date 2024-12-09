@@ -84,136 +84,136 @@ class Node2Vec:
         Precomputes transition probabilities for each node.
         """
 
-        d_graph = self.d_graph
+        # d_graph = self.d_graph
 
-        nodes_generator = self.graph.nodes() if self.quiet \
-            else tqdm(self.graph.nodes(), desc='Computing transition probabilities')
+        # nodes_generator = self.graph.nodes() if self.quiet \
+        #     else tqdm(self.graph.nodes(), desc='Computing transition probabilities')
 
-        for source in nodes_generator:
-            # Init tree structure
-            # if source > 2:
-            #     break
-            # Init probabilities dict for first travel
-            if self.PROBABILITIES_KEY not in d_graph[source]:
-                d_graph[source][self.PROBABILITIES_KEY] = dict()
+        # for source in nodes_generator:
+        #     # Init tree structure
+        #     # if source > 2:
+        #     #     break
+        #     # Init probabilities dict for first travel
+        #     if self.PROBABILITIES_KEY not in d_graph[source]:
+        #         d_graph[source][self.PROBABILITIES_KEY] = dict()
             
-            if self.SUBSEQUENCE not in d_graph[source]:
-                d_graph[source][self.SUBSEQUENCE] = dict()
+        #     if self.SUBSEQUENCE not in d_graph[source]:
+        #         d_graph[source][self.SUBSEQUENCE] = dict()
 
-            for current_node in self.graph.neighbors(source):
-                # Assign the unnormalized sampling strategy weight, normalize during random walk
-                #unnormalized_weights = list()
-                #d_neighbors = list()
-                # tree = Tree()
-                # root = tree.create_node(source, source, data=1) #root node
+        #     for current_node in self.graph.neighbors(source):
+        #         # Assign the unnormalized sampling strategy weight, normalize during random walk
+        #         #unnormalized_weights = list()
+        #         #d_neighbors = list()
+        #         # tree = Tree()
+        #         # root = tree.create_node(source, source, data=1) #root node
 
-                for destination in self.graph.neighbors(source):
-                    if destination == current_node:
-                        continue
+        #         for destination in self.graph.neighbors(source):
+        #             if destination == current_node:
+        #                 continue
 
-                    # # Init probabilities dictff
-                    # if self.PROBABILITIES_KEY not in d_graph[current_node]:
-                    #     d_graph[current_node][self.PROBABILITIES_KEY] = dict()
+        #             # # Init probabilities dictff
+        #             # if self.PROBABILITIES_KEY not in d_graph[current_node]:
+        #             #     d_graph[current_node][self.PROBABILITIES_KEY] = dict()
                     
-                    # p = self.sampling_strategy[source].get(self.P_KEY,
-                    #                                             self.p) if source in self.sampling_strategy else self.p
-                    # q = self.sampling_strategy[source].get(self.Q_KEY,
-                    #                                             self.q) if source in self.sampling_strategy else self.q
-                    #try:
-                    # if self.graph[source][destination].get(self.weight_key):
-                    #     weight = self.graph[source][destination].get(self.weight_key, 1)
-                    # else:
-                    #     ## Example : AtlasView({0: {'type': 1, 'weight':0.1}})- when we have edge weight
-                    #     edge = list(self.graph[source][destination])[-1]
-                    #     weight = self.graph[source][destination][edge].get(self.weight_key, 1)
-                    # # except:
-                    # #     weight = 1
-                    #ss_weight = weight
+        #             # p = self.sampling_strategy[source].get(self.P_KEY,
+        #             #                                             self.p) if source in self.sampling_strategy else self.p
+        #             # q = self.sampling_strategy[source].get(self.Q_KEY,
+        #             #                                             self.q) if source in self.sampling_strategy else self.q
+        #             #try:
+        #             # if self.graph[source][destination].get(self.weight_key):
+        #             #     weight = self.graph[source][destination].get(self.weight_key, 1)
+        #             # else:
+        #             #     ## Example : AtlasView({0: {'type': 1, 'weight':0.1}})- when we have edge weight
+        #             #     edge = list(self.graph[source][destination])[-1]
+        #             #     weight = self.graph[source][destination][edge].get(self.weight_key, 1)
+        #             # # except:
+        #             # #     weight = 1
+        #             #ss_weight = weight
 
                     
                     
                     
-                    # if destination == source:  # Backwards probability
-                    #     ss_weight = weight * 1 / p
-                    # elif destination in self.graph[source]:  # If the neighbor is connected to the source
-                    #     ss_weight = weight
-                    # else:
-                    #     ss_weight = weight * 1 / q
+        #             # if destination == source:  # Backwards probability
+        #             #     ss_weight = weight * 1 / p
+        #             # elif destination in self.graph[source]:  # If the neighbor is connected to the source
+        #             #     ss_weight = weight
+        #             # else:
+        #             #     ss_weight = weight * 1 / q
 
-                    # source->current_node
-                    ss_weight = self.graph[source][current_node].get(self.weight_key)
-                    threshold = 0.80
-                    if ss_weight <= threshold:
-                        #print(source, current_node, ss_weight)
-                        continue
-                    #unnormalized_weights.append(ss_weight)
-                    if self.walk_length == 1:
-                        if destination in self.graph.neighbors(current_node):
-                            ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
-                            if ss_weight1 <= threshold:
-                                continue
-                            if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                d_graph[source][self.SUBSEQUENCE][destination] = []
-                            weights_sum = np.array([ss_weight, ss_weight1])
-                            d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
+        #             # source->current_node
+        #             ss_weight = self.graph[source][current_node].get(self.weight_key)
+        #             threshold = 0.80
+        #             if ss_weight <= threshold:
+        #                 #print(source, current_node, ss_weight)
+        #                 continue
+        #             #unnormalized_weights.append(ss_weight)
+        #             if self.walk_length == 1:
+        #                 if destination in self.graph.neighbors(current_node):
+        #                     ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
+        #                     if ss_weight1 <= threshold:
+        #                         continue
+        #                     if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                         d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                     weights_sum = np.array([ss_weight, ss_weight1])
+        #                     d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
                             
-                    if self.walk_length == 2:
-                        if destination in self.graph.neighbors(current_node):
-                            ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
-                            if ss_weight1 <= threshold:
-                                continue
-                            if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                d_graph[source][self.SUBSEQUENCE][destination] = []
-                            weights_sum = np.array([ss_weight, ss_weight1])
-                            d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
+        #             if self.walk_length == 2:
+        #                 if destination in self.graph.neighbors(current_node):
+        #                     ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
+        #                     if ss_weight1 <= threshold:
+        #                         continue
+        #                     if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                         d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                     weights_sum = np.array([ss_weight, ss_weight1])
+        #                     d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
                                 
-                        for current_node1 in self.graph.neighbors(current_node):
-                            if current_node1 == source:
-                                continue
-                            if destination in self.graph.neighbors(current_node1):
-                                weight1 = self.graph[current_node1][destination].get(self.weight_key, 1)
-                                weight2 = self.graph[current_node][current_node1].get(self.weight_key, 1)
-                                if weight1 >= threshold and weight2 >= threshold:
-                                    weights_sum = np.array([ss_weight, weight1, weight2])
-                                    if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                        d_graph[source][self.SUBSEQUENCE][destination] = []
-                                    d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1])
+        #                 for current_node1 in self.graph.neighbors(current_node):
+        #                     if current_node1 == source:
+        #                         continue
+        #                     if destination in self.graph.neighbors(current_node1):
+        #                         weight1 = self.graph[current_node1][destination].get(self.weight_key, 1)
+        #                         weight2 = self.graph[current_node][current_node1].get(self.weight_key, 1)
+        #                         if weight1 >= threshold and weight2 >= threshold:
+        #                             weights_sum = np.array([ss_weight, weight1, weight2])
+        #                             if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                                 d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                             d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1])
                     
-                    if self.walk_length == 3:
-                        if destination in self.graph.neighbors(current_node):
-                            ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
-                            if ss_weight1 <= threshold:
-                                continue
-                            if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                d_graph[source][self.SUBSEQUENCE][destination] = []
-                            weights_sum = np.array([ss_weight, ss_weight1])
-                            d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
+        #             if self.walk_length == 3:
+        #                 if destination in self.graph.neighbors(current_node):
+        #                     ss_weight1 = self.graph[current_node][destination].get(self.weight_key, 1)
+        #                     if ss_weight1 <= threshold:
+        #                         continue
+        #                     if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                         d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                     weights_sum = np.array([ss_weight, ss_weight1])
+        #                     d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node])
                             
                         
-                        for current_node1 in self.graph.neighbors(current_node):
-                            if current_node1 == source:
-                                continue
-                            if destination in self.graph.neighbors(current_node1):
-                                weight1 = self.graph[current_node1][destination].get(self.weight_key, 1)
-                                weight2 = self.graph[current_node][current_node1].get(self.weight_key, 1)
-                                if weight1 >= threshold and weight2 >= threshold:
-                                    weights_sum = np.array([ss_weight, weight1, weight2])
-                                    if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                        d_graph[source][self.SUBSEQUENCE][destination] = []
-                                    d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1])
+        #                 for current_node1 in self.graph.neighbors(current_node):
+        #                     if current_node1 == source:
+        #                         continue
+        #                     if destination in self.graph.neighbors(current_node1):
+        #                         weight1 = self.graph[current_node1][destination].get(self.weight_key, 1)
+        #                         weight2 = self.graph[current_node][current_node1].get(self.weight_key, 1)
+        #                         if weight1 >= threshold and weight2 >= threshold:
+        #                             weights_sum = np.array([ss_weight, weight1, weight2])
+        #                             if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                                 d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                             d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1])
                             
-                            for current_node2 in self.graph.neighbors(current_node1):
-                                if current_node2 == source or current_node2 == current_node:
-                                    continue
-                                if destination in self.graph.neighbors(current_node2):
-                                    weight1 = self.graph[current_node2][destination].get(self.weight_key, 1)
-                                    weight2 = self.graph[current_node1][current_node2].get(self.weight_key, 1)
-                                    weight3 = self.graph[current_node][current_node1].get(self.weight_key, 1)
-                                    if weight1 >= threshold and weight2 >= threshold and weight3 >= threshold:
-                                        weights_sum = np.array([ss_weight, weight1, weight2, weight3])
-                                        if destination not in d_graph[source][self.SUBSEQUENCE]:
-                                            d_graph[source][self.SUBSEQUENCE][destination] = []
-                                        d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1, current_node2])
+        #                     for current_node2 in self.graph.neighbors(current_node1):
+        #                         if current_node2 == source or current_node2 == current_node:
+        #                             continue
+        #                         if destination in self.graph.neighbors(current_node2):
+        #                             weight1 = self.graph[current_node2][destination].get(self.weight_key, 1)
+        #                             weight2 = self.graph[current_node1][current_node2].get(self.weight_key, 1)
+        #                             weight3 = self.graph[current_node][current_node1].get(self.weight_key, 1)
+        #                             if weight1 >= threshold and weight2 >= threshold and weight3 >= threshold:
+        #                                 weights_sum = np.array([ss_weight, weight1, weight2, weight3])
+        #                                 if destination not in d_graph[source][self.SUBSEQUENCE]:
+        #                                     d_graph[source][self.SUBSEQUENCE][destination] = []
+        #                                 d_graph[source][self.SUBSEQUENCE][destination].append([weights_sum.mean(), current_node, current_node1, current_node2])
 
                                         
 
@@ -272,7 +272,7 @@ class Node2Vec:
             # d_graph[source][self.NEIGHBORS_KEY] = list(self.graph.neighbors(source))
             #del tree
 
-        graph_file = "./gowalla_80.pkl"
+        graph_file = "./gowalla.pkl"
         # with open(graph_file, 'wb') as f:
         #     pickle.dump(d_graph, f, protocol=2)
         print("prompt_set:", graph_file)

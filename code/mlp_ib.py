@@ -45,21 +45,25 @@ def local_kernel(seq_len, n_session):
 
 
 class TriMixer(nn.Module):
-    def __init__(self, seq_len, dims, act=nn.Sigmoid()):
+    def __init__(self, seq_len, dims, act=nn.ReLU(), dropout=0.3):  #nn.Sigmoid()
         super().__init__()
         self.l = seq_len
         self.act = act
         self.dims = dims
         self.global_mixing = global_kernel(self.l)
+        self.local_mixing = local_kernel(self.l, 2)
         self.time_encoder = TimeEncode(dims)
+        self.dropout = dropout
 
     def forward(self, x, t):  #x [N,B,D] [B,N,D] [B,D,N]
         # t = self.time_encoder(t)
         # x = torch.cat([x, t], dim=-1)
-        x1 = self.act(torch.matmul(x.permute(1, 2, 0), self.global_mixing.softmax(dim=-1)[:x.shape[0], :x.shape[0]])).permute(2, 0, 1)
-        #x = self.act(torch.matmul(x, self.local_mixing.softmax(dim=-1))).permute(0, 2, 1)
-        x += x1
-        return x
+        x1 = self.act(torch.matmul(x.permute(1, 2, 0), self.global_mixing.softmax(dim=-1)))#[:x.shape[0], :x.shape[0]]))#.permute(2, 0, 1)
+        x1 = F.dropout(x1, p=self.dropout, training=self.training)
+        x1 = torch.matmul(x1, self.local_mixing.softmax(dim=-1))#.permute(0, 2, 1)
+        x1 = F.dropout(x1, p=self.dropout, training=self.training)
+        x = x + x1.permute(2, 0, 1)
+        return x#.permute(2, 0, 1)
 
 
 class TriMixer_adj(nn.Module):
@@ -197,7 +201,7 @@ class MixerBlock(nn.Module):
         x1 = self.token_layernorm(feat)#.permute(0, 2, 1)
         x1 = self.token_forward(x1)#.permute(0, 2, 1)
         #x1 += feat
-        feat = feat + x1
+        #feat = feat + x1
         # x2 = feat.permute(1,2,0)
         # x2_list = []
         # for i in range(1,seq_len+1):
@@ -209,7 +213,7 @@ class MixerBlock(nn.Module):
         # x2 = torch.stack(x2_list, dim=0)
         # feat = feat + x2 
         # #x = torch.sigmoid(self.alpha) * x1 + (1 - torch.sigmoid(self.alpha)) * x2
-        return feat
+        return x1
     
 
     def forward(self, x, t):

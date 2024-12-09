@@ -51,16 +51,16 @@ class FlashbackTrainer():
         return self.model_t.parameters()
 
     def save_parameters_s(self):
-        torch.save(self.model_s.state_dict(), "4sq_student.pt")
+        torch.save(self.model_s.state_dict(), "gowalla_student_25.pt")
     
     def save_parameters_t(self):
-        torch.save(self.model_t.state_dict(), "4sq_teacher_attn.pt")
+        torch.save(self.model_t.state_dict(), "gowalla_teacher_25.pt")
     
     def load_parameters_t(self):
-        self.model_t.load_state_dict(torch.load("gowalla_teacher_attn_new.pt", map_location={'cuda:0':'cuda:1'}), strict=False) #, map_location={'cuda:0':'cuda:1'}
+        self.model_t.load_state_dict(torch.load("gowalla_teacher_25.pt", map_location={'cuda:0':'cuda:0'}), strict=False) #, map_location={'cuda:0':'cuda:1'}
     
     def load_parameters_s(self):
-        self.model_s.load_state_dict(torch.load("gowalla_student_2.pt", map_location={'cuda:0':'cuda:1'}), strict=False) #, map_location={'cuda:0':'cuda:1'}
+        self.model_s.load_state_dict(torch.load("gowalla_student_25.pt", map_location={'cuda:0':'cuda:0'}), strict=False) #, map_location={'cuda:0':'cuda:1'}
 
     def prepare(self, loc_count, user_count, hidden_size, mlp_hidden_size, gru_factory, device):
         def f_t(delta_t, user_len): return ((torch.cos(delta_t * 2 * np.pi / 86400) + 1) / 2) * torch.exp(
@@ -105,11 +105,9 @@ class FlashbackTrainer():
         """
 
         self.model_s.eval()
-        # (seq_len, user_len, loc_count)
         out_s, h, s_distance = self.model_s(x_real, x, x_adj, indexs, t, t_slot, s_real, s, y_t,
                             y_t_slot, y_s, h, active_users)
         
-
         out_s = out_s.transpose(0, 1)
 
         return out_s, h  # model outputs logits
@@ -134,7 +132,7 @@ class FlashbackTrainer():
         """ takes a batch (users x location sequence)
         and corresponding targets in order to compute the training loss """
 
-        self.model_t.train()
+        self.model_t.eval()
         seq_len, batch_size = y.shape[0], y.shape[1]
         output_t, h, kd_weight = self.model_t(x_real, x, x_adj, indexs, t, t_slot, s_real, s, y_t, y_t_slot, y_s, h,
                             active_users)  # out (seq_len, batch_size, loc_count)
@@ -146,45 +144,35 @@ class FlashbackTrainer():
         out_s = output_s.view(-1, self.loc_count)  # (seq_len * batch_size, loc_count)
         y_shape = y.view(-1)  # (seq_len * batch_size)
 
-        tea_all_loss = entropy(out_t)
-        tea_index = torch.argmax(out_t, dim=-1)
+        tea_loss = self.cross_entropy_loss(out_s, y_shape)
+        tea_all_loss_e = 1 - ((F.softmax(out_t, dim=-1) * F.log_softmax(out_t, dim=-1)) / torch.log(torch.tensor(out_t.size(1)))).sum(-1)
 
         
         tea_index = torch.argsort(out_t, axis=-1)[:, -10:]
         y_repeated = y_shape.unsqueeze(1).repeat(1, 10)
         mask_value_tea = (tea_index == y_repeated) #* torch.exp(torch.arange(0, 1, 0.1)).unsqueeze(0).to(y.device) #F.softmax(out_t[tea_index], dim=-1)
         mask_value_tea_pos = mask_value_tea.sum(-1)
-        mask_value_tea_neg = 1 - mask_value_tea_pos
 
-        stu_index = torch.argsort(out_s, axis=-1)[:, -10:]
-        mask_value_stu = (stu_index == y_repeated).unsqueeze(0).to(y.device) #F.softmax(out_t[tea_index], dim=-1)
-        mask_value_stu_pos = mask_value_stu.sum(-1)
-        mask_value_stu_neg = 1 - mask_value_stu.sum(-1)
-
-        mask_value_st_np = mask_value_tea_pos * mask_value_stu_neg
-        
-
-        attention_p = mask_value_st_np # torch.exp(-tea_all_loss_e) * mask_value_st_np
-
+        attention_p = mask_value_tea_pos * tea_all_loss_e
 
         temp = 0.5
         stu_loss = self.cross_entropy_loss(out_s, y_shape)
+
+        kd_loss_p = self.criterion_s_all(F.log_softmax(out_s / temp, dim=1),
+            F.softmax(out_t / temp, dim=1)).sum(dim=-1)
+
+        RKD_loss = torch.mul(attention_p, kd_loss_p).mean()
+
         
 
-        weight_loss = self.criterion_s_all(torch.log(s_distance.permute(2,0,1).reshape(-1, seq_len)),
-            kd_weight.permute(2,0,1).reshape(-1, seq_len)).sum(dim=-1)#.sum()/ y.shape[0]
-        weight_loss = torch.mul(attention_p, weight_loss).mean()#.sum() / weight_loss.shape[0]
+        SKD_loss = self.criterion_s_all(torch.sigmoid(s_distance.permute(2,0,1).reshape(-1, seq_len)),
+            torch.sigmoid(kd_weight.permute(2,0,1).reshape(-1, seq_len))).sum(dim=-1)#.sum()/ y.shape[0]
+        SKD_loss = torch.mul(attention_p, SKD_loss).mean()#.sum() / weight_loss.shape[0]
 
-
-        inter_loss = self.criterion_s(F.log_softmax(output_s.permute(1,2,0).reshape(-1, seq_len), dim=-1),
-            F.softmax(output_t.permute(1,2,0).reshape(-1, seq_len),dim=-1))
 
         alpha = 0.5
-        loss = alpha * stu_loss + (1 - alpha) * (weight_loss + inter_loss) #* (temp**2) #if (tea_loss - stu_loss < 0) else stu_loss
-
-        return loss#, stu_loss, kd_loss, tea_loss, weight_loss, inter_loss
+        loss = alpha * stu_loss + (1 - alpha) * (RKD_loss + SKD_loss) #* (temp**2) #if (tea_loss - stu_loss < 0) else stu_loss
 
 
-#kl_loss: https://blog.csdn.net/ChenglinBen/article/details/122057981
 
-#weight_loss加上attention效果更好
+        return loss, stu_loss, kd_loss, tea_loss, SKD_loss, inter_loss
