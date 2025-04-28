@@ -27,7 +27,7 @@ python train.py
 
 # Motivation
 
-The findings from the data visualization analysis are as follows: (a) the student model derived from standard knowledge distillation lacks confidence, (b) its prediction errors are concentrated in high-entropy regions of the teacher model, and (c) the student's confidence decreases as the teacher's entropy increases. These insights motivate us to enhance the student's confidence to improve its lightweight prediction accuracy. 
+The findings from the data visualization analysis are as follows: (a) diverse data augmentation improved the model's predictive performance, (b) the student model derived from standard knowledge distillation lacks confidence, (c) the student model's confidence is positively correlated with the teacher model's confidence, and (d) the student model's prediction errors are concentrated in areas where the teacher model has low confidence. These insights motivate us to enhance the student's confidence to improve its lightweight prediction accuracy. 
 ![motivation](fig/intro.png)
 
 # Trajectory Completion Module (TCM)
